@@ -36,6 +36,13 @@ const entregadorBuildPath = path.join(__dirname, "painel", "entregador", "build"
 app.use("/painel", express.static(painelBuildPath));
 app.use("/entregador", express.static(entregadorBuildPath));
 
+function enviarSpaIndex(res, buildPath) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.sendFile(path.join(buildPath, "index.html"));
+}
+
 app.get("/", (_req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -101,11 +108,11 @@ app.get("/", (_req, res) => {
 });
 
 app.get(/^\/painel(?:\/.*)?$/, (_req, res) => {
-  res.sendFile(path.join(painelBuildPath, "index.html"));
+  enviarSpaIndex(res, painelBuildPath);
 });
 
 app.get(/^\/entregador(?:\/.*)?$/, (_req, res) => {
-  res.sendFile(path.join(entregadorBuildPath, "index.html"));
+  enviarSpaIndex(res, entregadorBuildPath);
 });
 
 const server = http.createServer(app);
