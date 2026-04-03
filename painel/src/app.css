@@ -86,6 +86,7 @@ body,
 .brand.with-logo div {
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 
 .brand-logo {
@@ -99,10 +100,14 @@ body,
 .brand strong {
   font-size: 30px;
   color: #f5fbff;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .brand span {
   color: #95abc1;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .field {
@@ -178,6 +183,19 @@ body,
   display: grid;
   gap: 16px;
   margin-top: 20px;
+}
+
+.home-grid .secondary-button {
+  width: 100%;
+  min-height: 58px;
+  padding: 14px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 .layout {

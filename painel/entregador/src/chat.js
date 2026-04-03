@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
+import { API_URL } from "./config";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
 const LOGO_URL = `${process.env.PUBLIC_URL}/logo192.png`;
 
 function formatarHora(data) {
