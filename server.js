@@ -5,12 +5,15 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 const { DatabaseSync } = require("node:sqlite");
+const { createClient } = require("@supabase/supabase-js");
 
 const PORT = process.env.PORT || 4000;
 const TEMPO_REATRIBUICAO_MS = 5 * 60 * 1000;
 const TEXTOS_PRONTOS_PATH = path.join(__dirname, "painel", "data", "textos-prontos.json");
 const DATABASE_PATH = path.join(__dirname, "data", "foxlog-connect.db");
 const LOGIN_FALLBACK_PATH = path.join(__dirname, "data", "login-fallback.json");
+const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim();
+const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 const GOOGLE_SHEET_ID = "1CSC17Trs7wDjC1zfQmmWSJIOe8Kr7TX9omLxMHd8q5k";
 const GOOGLE_SHEET_GID = "0";
 const GOOGLE_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=${GOOGLE_SHEET_GID}`;
@@ -150,7 +153,7 @@ const atendimentos = {};
 const chatsAbertos = {};
 const statusAtendentes = {};
 const regioesAtendentes = {};
-let textosProntos = carregarTextosProntos();
+let textosProntos = sanitizarTextosProntos(TEXTOS_PRONTOS_PADRAO);
 let cachePlanilha = {
   expiresAt: 0,
   rows: []
@@ -164,6 +167,8 @@ let cachePerformance = {
   rows: []
 };
 let db = null;
+let supabase = null;
+let storageMode = "sqlite";
 
 const LOGIN_FALLBACK_PADRAO = [
   { email: "rafael@foxlog.com", nome: "Rafael", role: "admin", status: "admin", senha: "" },
@@ -176,7 +181,33 @@ const LOGIN_FALLBACK_PADRAO = [
   { email: "dantas@foxlog.com", nome: "Dantas", role: "atendente", status: "atendente", senha: "" }
 ];
 
-function inicializarBanco() {
+function parseJsonField(valor, fallback) {
+  if (valor === null || valor === undefined) return fallback;
+  if (typeof valor === "string") {
+    try {
+      return JSON.parse(valor);
+    } catch (_) {
+      return fallback;
+    }
+  }
+  return valor;
+}
+
+function mapearTicketPersistido(row) {
+  return {
+    id: String(row.id),
+    cpf: row.cpf,
+    iniciadoEm: row.iniciado_em,
+    finalizadoEm: row.finalizado_em,
+    motivo: row.motivo || "finalizado",
+    atendenteAtual: parseJsonField(row.atendente_atual_json ?? row.atendente_atual, null),
+    finalizadoPor: parseJsonField(row.finalizado_por_json ?? row.finalizado_por, null),
+    mensagens: parseJsonField(row.mensagens_json ?? row.mensagens, []),
+    eventos: parseJsonField(row.eventos_json ?? row.eventos, [])
+  };
+}
+
+function inicializarBancoSqlite() {
   fs.mkdirSync(path.dirname(DATABASE_PATH), { recursive: true });
   db = new DatabaseSync(DATABASE_PATH);
   db.exec(`
@@ -194,7 +225,46 @@ function inicializarBanco() {
   `);
 }
 
-function carregarHistoricosDoBanco() {
+async function inicializarPersistencia() {
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+
+    const { error } = await supabase.from("tickets").select("id", { head: true, count: "exact" });
+    if (error) {
+      throw new Error(`Nao foi possivel conectar ao Supabase: ${error.message}`);
+    }
+
+    storageMode = "supabase";
+    return;
+  }
+
+  inicializarBancoSqlite();
+  storageMode = "sqlite";
+}
+
+async function carregarHistoricosDoBanco() {
+  if (storageMode === "supabase" && supabase) {
+    const { data, error } = await supabase
+      .from("tickets")
+      .select("id, cpf, iniciado_em, finalizado_em, motivo, atendente_atual, finalizado_por, mensagens, eventos")
+      .order("finalizado_em", { ascending: false, nullsFirst: false });
+
+    if (error) {
+      throw new Error(`Nao foi possivel carregar tickets do Supabase: ${error.message}`);
+    }
+
+    data.forEach((row) => {
+      const ticket = mapearTicketPersistido(row);
+      if (!historicos[ticket.cpf]) {
+        historicos[ticket.cpf] = [];
+      }
+      historicos[ticket.cpf].push(ticket);
+    });
+    return;
+  }
+
   if (!db) return;
 
   const rows = db
@@ -210,21 +280,36 @@ function carregarHistoricosDoBanco() {
       historicos[row.cpf] = [];
     }
 
-    historicos[row.cpf].push({
-      id: String(row.id),
-      cpf: row.cpf,
-      iniciadoEm: row.iniciado_em,
-      finalizadoEm: row.finalizado_em,
-      motivo: row.motivo || "finalizado",
-      atendenteAtual: row.atendente_atual_json ? JSON.parse(row.atendente_atual_json) : null,
-      finalizadoPor: row.finalizado_por_json ? JSON.parse(row.finalizado_por_json) : null,
-      mensagens: row.mensagens_json ? JSON.parse(row.mensagens_json) : [],
-      eventos: row.eventos_json ? JSON.parse(row.eventos_json) : []
-    });
+    historicos[row.cpf].push(mapearTicketPersistido(row));
   });
 }
 
-function inserirHistoricoNoBanco(historico) {
+async function inserirHistoricoNoBanco(historico) {
+  if (storageMode === "supabase" && supabase) {
+    const payload = {
+      cpf: historico.cpf,
+      iniciado_em: historico.iniciadoEm,
+      finalizado_em: historico.finalizadoEm,
+      motivo: historico.motivo,
+      atendente_atual: historico.atendenteAtual || null,
+      finalizado_por: historico.finalizadoPor || null,
+      mensagens: historico.mensagens || [],
+      eventos: historico.eventos || []
+    };
+
+    const { data, error } = await supabase
+      .from("tickets")
+      .insert(payload)
+      .select("id, cpf, iniciado_em, finalizado_em, motivo, atendente_atual, finalizado_por, mensagens, eventos")
+      .single();
+
+    if (error) {
+      throw new Error(`Nao foi possivel salvar ticket no Supabase: ${error.message}`);
+    }
+
+    return mapearTicketPersistido(data);
+  }
+
   if (!db) return historico;
 
   const resultado = db
@@ -250,8 +335,30 @@ function inserirHistoricoNoBanco(historico) {
   };
 }
 
-function atualizarHistoricoNoBanco(historico) {
-  if (!db || !historico?.id) return;
+async function atualizarHistoricoNoBanco(historico) {
+  if (!historico?.id) return;
+
+  if (storageMode === "supabase" && supabase) {
+    const { error } = await supabase
+      .from("tickets")
+      .update({
+        iniciado_em: historico.iniciadoEm,
+        finalizado_em: historico.finalizadoEm,
+        motivo: historico.motivo,
+        atendente_atual: historico.atendenteAtual || null,
+        finalizado_por: historico.finalizadoPor || null,
+        mensagens: historico.mensagens || [],
+        eventos: historico.eventos || []
+      })
+      .eq("id", historico.id);
+
+    if (error) {
+      throw new Error(`Nao foi possivel atualizar ticket no Supabase: ${error.message}`);
+    }
+    return;
+  }
+
+  if (!db) return;
 
   db.prepare(`
     UPDATE tickets
@@ -290,7 +397,7 @@ function sanitizarTextosProntos(lista) {
   return sanitizados.length > 0 ? sanitizados : [...TEXTOS_PRONTOS_PADRAO];
 }
 
-function carregarTextosProntos() {
+function carregarTextosProntosLocal() {
   try {
     if (!fs.existsSync(TEXTOS_PRONTOS_PATH)) {
       return sanitizarTextosProntos(TEXTOS_PRONTOS_PADRAO);
@@ -303,11 +410,67 @@ function carregarTextosProntos() {
   }
 }
 
-function persistirTextosProntos(lista) {
+function persistirTextosProntosLocal(lista) {
   textosProntos = sanitizarTextosProntos(lista);
   fs.mkdirSync(path.dirname(TEXTOS_PRONTOS_PATH), { recursive: true });
   fs.writeFileSync(TEXTOS_PRONTOS_PATH, JSON.stringify(textosProntos, null, 2));
   return textosProntos;
+}
+
+async function carregarTextosProntos() {
+  if (storageMode === "supabase" && supabase) {
+    const { data, error } = await supabase
+      .from("textos_prontos")
+      .select("id, label, text, ativo, ordem")
+      .eq("ativo", true)
+      .order("ordem", { ascending: true });
+
+    if (error) {
+      throw new Error(`Nao foi possivel carregar textos prontos do Supabase: ${error.message}`);
+    }
+
+    if (Array.isArray(data) && data.length > 0) {
+      textosProntos = sanitizarTextosProntos(data);
+      return textosProntos;
+    }
+  }
+
+  textosProntos = carregarTextosProntosLocal();
+  return textosProntos;
+}
+
+async function persistirTextosProntos(lista) {
+  const sanitizados = sanitizarTextosProntos(lista);
+
+  if (storageMode === "supabase" && supabase) {
+    const { error: deleteError } = await supabase.from("textos_prontos").delete().not("id", "is", null);
+    if (deleteError) {
+      throw new Error(`Nao foi possivel limpar textos prontos no Supabase: ${deleteError.message}`);
+    }
+
+    const payload = sanitizados.map((item, indice) => ({
+      id: item.id.startsWith("texto-") ? undefined : item.id,
+      label: item.label,
+      text: item.text,
+      ativo: true,
+      ordem: indice + 1
+    }));
+
+    const { data, error } = await supabase
+      .from("textos_prontos")
+      .insert(payload)
+      .select("id, label, text, ativo, ordem")
+      .order("ordem", { ascending: true });
+
+    if (error) {
+      throw new Error(`Nao foi possivel salvar textos prontos no Supabase: ${error.message}`);
+    }
+
+    textosProntos = sanitizarTextosProntos(data);
+    return textosProntos;
+  }
+
+  return persistirTextosProntosLocal(sanitizados);
 }
 
 function sanitizarFallbackLogin(lista) {
@@ -344,9 +507,6 @@ function carregarFallbackLogins() {
     return sanitizarFallbackLogin(LOGIN_FALLBACK_PADRAO);
   }
 }
-
-inicializarBanco();
-carregarHistoricosDoBanco();
 
 function normalizarCpf(valor = "") {
   return String(valor).replace(/\D/g, "").slice(0, 11);
@@ -488,6 +648,43 @@ async function carregarEntregadoresDaPlanilha() {
   return rows;
 }
 
+async function carregarEntregadores() {
+  if (cachePlanilha.expiresAt > Date.now() && cachePlanilha.rows.length > 0) {
+    return cachePlanilha.rows;
+  }
+
+  if (storageMode === "supabase" && supabase) {
+    const { data, error } = await supabase
+      .from("entregadores")
+      .select("cpf, nome, celular, telefone, cidade, regiao, hot_zone, observacoes, status")
+      .order("nome", { ascending: true });
+
+    if (error) {
+      throw new Error(`Nao foi possivel carregar entregadores do Supabase: ${error.message}`);
+    }
+
+    if (Array.isArray(data) && data.length > 0) {
+      const rows = data.map((item) => ({
+        cpf: normalizarCpf(item.cpf || ""),
+        nome: String(item.nome || "").trim(),
+        celular: normalizarTelefone(item.celular || item.telefone || ""),
+        cidade: normalizarCidadeSuporte(item.cidade || item.regiao || ""),
+        hotZone: String(item.hot_zone || "").trim(),
+        status: String(item.status || "").trim().toUpperCase()
+      })).filter((item) => item.cpf);
+
+      cachePlanilha = {
+        expiresAt: Date.now() + PLANILHA_CACHE_MS,
+        rows
+      };
+
+      return rows;
+    }
+  }
+
+  return carregarEntregadoresDaPlanilha();
+}
+
 async function carregarPerformanceDaPlanilha() {
   if (cachePerformance.expiresAt > Date.now() && cachePerformance.rows.length > 0) {
     return cachePerformance.rows;
@@ -547,8 +744,48 @@ async function carregarPerformanceDaPlanilha() {
 }
 
 async function buscarPerformanceDoEntregador(cpf) {
-  const rows = await carregarPerformanceDaPlanilha();
+  const rows = await carregarPerformance();
   return rows.find((item) => item.cpf === cpf) || null;
+}
+
+async function carregarPerformance() {
+  if (cachePerformance.expiresAt > Date.now() && cachePerformance.rows.length > 0) {
+    return cachePerformance.rows;
+  }
+
+  if (storageMode === "supabase" && supabase) {
+    const { data, error } = await supabase
+      .from("performance_entregadores")
+      .select("cpf, nome, local, tsh, ar, caa, overtime, corridas, nivel")
+      .order("nome", { ascending: true });
+
+    if (error) {
+      throw new Error(`Nao foi possivel carregar performance do Supabase: ${error.message}`);
+    }
+
+    if (Array.isArray(data) && data.length > 0) {
+      const rows = data.map((item) => ({
+        cpf: normalizarCpf(item.cpf || ""),
+        local: String(item.local || "").trim(),
+        nome: String(item.nome || "").trim(),
+        tsh: Number(item.tsh || 0),
+        ar: Number(item.ar || 0),
+        caa: Number(item.caa || 0),
+        overtime: Number(item.overtime || 0),
+        corridas: Number(item.corridas || 0),
+        nivel: normalizarNivelPerformance(item.nivel || "")
+      })).filter((item) => item.cpf);
+
+      cachePerformance = {
+        expiresAt: Date.now() + PLANILHA_CACHE_MS,
+        rows
+      };
+
+      return rows;
+    }
+  }
+
+  return carregarPerformanceDaPlanilha();
 }
 
 function extrairJsonGviz(resposta = "") {
@@ -728,15 +965,59 @@ async function carregarLoginsDaPlanilha() {
 }
 
 async function carregarAtendentesAtivos() {
+  if (storageMode === "supabase" && supabase) {
+    const { data, error } = await supabase
+      .from("usuarios_painel")
+      .select("email, nome, senha, role, status, regioes")
+      .order("nome", { ascending: true });
+
+    if (error) {
+      throw new Error(`Nao foi possivel carregar usuarios do Supabase: ${error.message}`);
+    }
+
+    if (Array.isArray(data) && data.length > 0) {
+      const perfis = data
+        .map((item) => {
+          const status = interpretarStatusLogin(item.status || item.role || "atendente");
+          if (!status.ativo) return null;
+
+          return {
+            email: normalizarEmail(item.email || ""),
+            nome: String(item.nome || nomeAtendentePadrao(item.email || "")).trim(),
+            senha: normalizarSenhaLogin(item.senha || ""),
+            role: item.role === "admin" ? "admin" : item.role === "operacao" ? "operacao" : "atendente",
+            status: String(item.status || item.role || "atendente").trim(),
+            regioes: Array.isArray(item.regioes) ? item.regioes.map((regiao) => normalizarCidadeSuporte(regiao || "")) : [],
+            source: "supabase"
+          };
+        })
+        .filter((item) => item?.email);
+
+      atendentes = perfis;
+      perfis.forEach((item) => {
+        regioesAtendentes[item.email] = Array.isArray(item.regioes) ? [...new Set(item.regioes)] : [];
+      });
+      cacheLogin = {
+        expiresAt: Date.now() + PLANILHA_CACHE_MS,
+        rows: perfis
+      };
+
+      return perfis;
+    }
+  }
+
   try {
     return await carregarLoginsDaPlanilha();
   } catch (error) {
     if (atendentes.length > 0) {
       return atendentes;
     }
-    const fallback = carregarFallbackLogins();
-    if (fallback.length > 0) {
+  const fallback = carregarFallbackLogins();
+  if (fallback.length > 0) {
       atendentes = fallback;
+      fallback.forEach((item) => {
+        regioesAtendentes[item.email] = [];
+      });
       return fallback;
     }
     throw error;
@@ -744,7 +1025,7 @@ async function carregarAtendentesAtivos() {
 }
 
 async function buscarEntregadorAtivoNaPlanilha(cpf) {
-  const rows = await carregarEntregadoresDaPlanilha();
+  const rows = await carregarEntregadores();
   return rows.find((item) => item.cpf === cpf && item.status === "ATIVO") || null;
 }
 
@@ -765,7 +1046,7 @@ function sincronizarEntregadorDaPlanilha(registro) {
 }
 
 async function sincronizarBaseAtivaDaPlanilha() {
-  const rows = await carregarEntregadoresDaPlanilha();
+  const rows = await carregarEntregadores();
   const ativos = rows.filter((item) => item.status === "ATIVO");
   const unicosPorCpf = new Map();
 
@@ -1302,7 +1583,7 @@ function marcarMensagensLidas(cpf, viewer) {
   atualizadas.forEach((mensagem) => emitirStatusMensagem(cpf, mensagem));
 }
 
-function removerMensagem(cpf, messageId) {
+async function removerMensagem(cpf, messageId) {
   if (!conversas[cpf]) return false;
 
   const originalLength = conversas[cpf].length;
@@ -1320,7 +1601,7 @@ function removerMensagem(cpf, messageId) {
     ...item,
     mensagens: (item.mensagens || []).filter((mensagem) => mensagem.id !== messageId)
   }));
-  (historicos[cpf] || []).forEach((item) => atualizarHistoricoNoBanco(item));
+  await Promise.all((historicos[cpf] || []).map((item) => atualizarHistoricoNoBanco(item)));
 
   return true;
 }
@@ -1332,7 +1613,7 @@ function obterUltimoDisparo(cpf) {
     .find((item) => item?.kind === "broadcast" && item?.text);
 }
 
-function finalizarAtendimento(cpf, finalizadoPor, motivo = "finalizado") {
+async function finalizarAtendimento(cpf, finalizadoPor, motivo = "finalizado") {
   const atendimento = atendimentos[cpf];
   if (!atendimento) return null;
 
@@ -1352,30 +1633,41 @@ function finalizarAtendimento(cpf, finalizadoPor, motivo = "finalizado") {
     eventos: atendimento.eventos
   };
 
-  const historicoPersistido = inserirHistoricoNoBanco(historico);
+  const historicoPersistido = await inserirHistoricoNoBanco(historico);
   historicos[cpf].unshift(historicoPersistido);
   delete atendimentos[cpf];
 
   return historicoPersistido;
 }
 
-function limparTodosHistoricos() {
+async function limparTodosHistoricos() {
   Object.keys(historicos).forEach((cpf) => {
     historicos[cpf] = [];
   });
+  if (storageMode === "supabase" && supabase) {
+    const { error } = await supabase.from("tickets").delete().not("id", "is", null);
+    if (error) {
+      throw new Error(`Nao foi possivel limpar tickets no Supabase: ${error.message}`);
+    }
+    return;
+  }
   if (db) {
     db.exec("DELETE FROM tickets;");
   }
 }
 
 app.get("/health", (_, res) => {
-  res.json({ ok: true, port: PORT });
+  res.json({ ok: true, port: PORT, storage: storageMode });
 });
 
-app.post("/admin/limpar-tickets", (_req, res) => {
-  limparTodosHistoricos();
-  emitirPainelGeral();
-  return res.json({ ok: true });
+app.post("/admin/limpar-tickets", async (_req, res) => {
+  try {
+    await limparTodosHistoricos();
+    emitirPainelGeral();
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Nao foi possivel limpar os tickets." });
+  }
 });
 
 app.post("/login", async (req, res) => {
@@ -1393,7 +1685,7 @@ app.post("/login", async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: "Email ou senha invalidos, ou usuario sem permissao na planilha." });
+      return res.status(401).json({ error: "Email ou senha invalidos, ou usuario sem permissao de acesso." });
     }
 
     return res.json({
@@ -1403,7 +1695,7 @@ app.post("/login", async (req, res) => {
       status: user.status
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message || "Nao foi possivel validar a planilha de login." });
+    return res.status(500).json({ error: error.message || "Nao foi possivel validar o login." });
   }
 });
 
@@ -1471,11 +1763,16 @@ app.get("/config/suportes", (_, res) => {
   });
 });
 
-app.get("/config/textos-prontos", (_, res) => {
-  return res.json({ textosProntos });
+app.get("/config/textos-prontos", async (_, res) => {
+  try {
+    const atualizados = await carregarTextosProntos();
+    return res.json({ textosProntos: atualizados });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Nao foi possivel carregar os textos prontos." });
+  }
 });
 
-app.post("/config/textos-prontos", (req, res) => {
+app.post("/config/textos-prontos", async (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
   const perfil = obterAtendente(email);
 
@@ -1484,10 +1781,10 @@ app.post("/config/textos-prontos", (req, res) => {
   }
 
   try {
-    const atualizados = persistirTextosProntos(req.body.textosProntos);
+    const atualizados = await persistirTextosProntos(req.body.textosProntos);
     return res.json({ ok: true, textosProntos: atualizados });
-  } catch (_) {
-    return res.status(500).json({ error: "Nao foi possivel salvar as mensagens prontas." });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Nao foi possivel salvar as mensagens prontas." });
   }
 });
 
@@ -1501,7 +1798,7 @@ app.post("/entregadores/entrar", async (req, res) => {
   try {
     const registro = await buscarEntregadorAtivoNaPlanilha(cpf);
     if (!registro) {
-      return res.status(403).json({ error: "CPF nao encontrado na planilha ou com status diferente de ATIVO." });
+      return res.status(403).json({ error: "CPF nao encontrado na base ou com status diferente de ATIVO." });
     }
 
     const payload = sincronizarEntregadorDaPlanilha(registro);
@@ -1510,7 +1807,7 @@ app.post("/entregadores/entrar", async (req, res) => {
 
     return res.json({ ok: true, entregador: payload });
   } catch (error) {
-    return res.status(500).json({ error: error.message || "Nao foi possivel validar a planilha." });
+    return res.status(500).json({ error: error.message || "Nao foi possivel validar o CPF." });
   }
 });
 
@@ -1659,7 +1956,7 @@ io.on("connection", (socket) => {
       const email = normalizarEmail(id);
       const perfil = obterAtendente(email);
       if (!perfil) {
-        io.to(socket.id).emit("erro_atendimento", "Seu acesso nao foi encontrado na planilha de login.");
+        io.to(socket.id).emit("erro_atendimento", "Seu acesso nao foi encontrado na base de login.");
         return;
       }
 
@@ -1687,7 +1984,7 @@ io.on("connection", (socket) => {
 
   });
 
-  socket.on("set_regioes_atendente", ({ admin, email, regioes }) => {
+  socket.on("set_regioes_atendente", async ({ admin, email, regioes }) => {
     const perfil = obterAtendente(admin);
     const destino = obterAtendente(email);
     if (!perfil || perfil.role !== "admin" || !destino) return;
@@ -1697,6 +1994,10 @@ io.on("connection", (socket) => {
       : [];
 
     regioesAtendentes[email] = [...new Set(lista)];
+    if (storageMode === "supabase" && supabase && destino.source === "supabase") {
+      await supabase.from("usuarios_painel").update({ regioes: regioesAtendentes[email] }).eq("email", email);
+      cacheLogin.expiresAt = 0;
+    }
     emitirPainelGeral();
   });
 
@@ -1794,7 +2095,7 @@ io.on("connection", (socket) => {
     transferirAtendimento(idCpf, atendimento.atendenteEmail, destinoPerfil.email, "transferencia");
   });
 
-  socket.on("delete_msg", ({ email, cpf, messageId }) => {
+  socket.on("delete_msg", async ({ email, cpf, messageId }) => {
     const perfil = obterAtendente(email);
     const idCpf = normalizarCpf(cpf);
     if (!perfil || !idCpf || !messageId) return;
@@ -1804,7 +2105,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const removido = removerMensagem(idCpf, messageId);
+    const removido = await removerMensagem(idCpf, messageId);
     if (!removido) return;
 
     emitirRemocaoMensagem(idCpf, messageId);
@@ -1904,7 +2205,7 @@ io.on("connection", (socket) => {
     emitirPainelGeral();
   });
 
-  socket.on("finalizar_atendimento", ({ atendente, cpf }) => {
+  socket.on("finalizar_atendimento", async ({ atendente, cpf }) => {
     const perfil = obterAtendente(atendente);
     if (!perfil) return;
 
@@ -1939,7 +2240,7 @@ io.on("connection", (socket) => {
       io.to(sockets[idCpf]).emit("msg_confirmed", mensagemEncerramento);
     }
 
-    const historico = finalizarAtendimento(idCpf, atendente, "finalizado");
+    const historico = await finalizarAtendimento(idCpf, atendente, "finalizado");
 
     Object.keys(chatsAbertos).forEach((email) => {
       if (chatsAbertos[email] === idCpf && sockets[email]) {
@@ -1995,6 +2296,19 @@ server.on("error", (error) => {
   throw error;
 });
 
-server.listen(PORT, () => {
-  console.log(`FoxLog Connect backend ON na porta ${PORT}`);
-});
+async function iniciarServidor() {
+  try {
+    await inicializarPersistencia();
+    await carregarHistoricosDoBanco();
+    await carregarTextosProntos();
+
+    server.listen(PORT, () => {
+      console.log(`FoxLog Connect backend ON na porta ${PORT} usando ${storageMode}.`);
+    });
+  } catch (error) {
+    console.error(error.message || "Nao foi possivel iniciar a persistencia.");
+    process.exit(1);
+  }
+}
+
+iniciarServidor();
