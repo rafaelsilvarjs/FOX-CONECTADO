@@ -1,0 +1,22 @@
+[
+  {
+    "id": "texto-1",
+    "label": "TESTE",
+    "text": "Ola! Estamos verificando sua sol"
+  },
+  {
+    "id": "texto-2",
+    "label": "Confirmar nome",
+    "text": "Pode me confirmar seu nome completo, por favor?"
+  },
+  {
+    "id": "texto-3",
+    "label": "Acionar operacao",
+    "text": "Recebido. Vou acionar a operacao e retorno em seguida."
+  },
+  {
+    "id": "texto-4",
+    "label": "Em acompanhamento",
+    "text": "Seu caso foi encaminhado e seguimos acompanhando."
+  }
+]

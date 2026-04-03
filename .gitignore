@@ -1,0 +1,13 @@
+node_modules/
+painel/node_modules/
+painel/entregador/node_modules/
+
+painel/build/
+painel/entregador/build/
+
+server.out.log
+server.err.log
+data/*.db
+
+.DS_Store
+Thumbs.db

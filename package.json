@@ -1,0 +1,17 @@
+{
+  "name": "chat-entregadores",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "build:apps": "npm run build --prefix painel && npm run build --prefix painel/entregador",
+    "start": "npm run build:apps && node server.js",
+    "start:server": "node server.js",
+    "start:dev": "nodemon server.js",
+    "start:painel": "npm start --prefix painel",
+    "start:entregador": "npm start --prefix painel/entregador"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

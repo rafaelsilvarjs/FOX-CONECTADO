@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat Entregador</title>
+</head>
+<body>
+
+<h2>Chat Entregador</h2>
+
+<select id="tipo">
+  <option value="entregador">Entregador</option>
+  <option value="atendente">Atendente</option>
+</select>
+
+<input id="userId" placeholder="Seu ID (ex: entregador99)" />
+<input id="to" placeholder="Enviar para (ex: atendente1)" />
+<br><br>
+
+<input id="msg" placeholder="Mensagem" />
+<button onclick="send()">Enviar</button>
+
+<div id="chat"></div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+  const socket = io("http://localhost:3000");
+
+  function login() {
+    const userId = document.getElementById("userId").value;
+    const tipo = document.getElementById("tipo").value;
+
+    console.log("LOGANDO:", userId, tipo);
+
+    socket.emit("login", {
+      userId,
+      tipo
+    });
+  }
+
+  function send() {
+    const msg = document.getElementById("msg").value;
+    const to = document.getElementById("to").value;
+    const from = document.getElementById("userId").value;
+
+    socket.emit("send_message", {
+      from,
+      to,
+      message: msg
+    });
+
+    addMessage("Eu: " + msg);
+  }
+
+  socket.on("receive_message", (data) => {
+    addMessage("Recebido: " + data.message);
+  });
+
+  function addMessage(text) {
+    const div = document.getElementById("chat");
+    const p = document.createElement("p");
+    p.innerText = text;
+    div.appendChild(p);
+  }
+
+  // 🔥 LOGIN AUTOMÁTICO AO DIGITAR
+  document.getElementById("userId").addEventListener("change", login);
+</script>
+
+</body>
+</html>
