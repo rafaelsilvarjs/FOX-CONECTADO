@@ -82,7 +82,7 @@ function Login({ setEntregador, setTela }) {
           {loading ? "Entrando..." : "Entrar"}
         </button>
 
-        <div className="deliverer-tip">Entre com um CPF ativo da planilha para acessar o atendimento.</div>
+        <div className="deliverer-tip">Digite seu CPF acima para se conectar ao atendimento.</div>
 
         {erro ? <div className="deliverer-error">{erro}</div> : null}
       </div>
