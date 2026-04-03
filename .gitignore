@@ -2,6 +2,17 @@ node_modules/
 painel/node_modules/
 painel/entregador/node_modules/
 
+painel/.env
+painel/.env.local
+painel/.env.development.local
+painel/.env.test.local
+painel/.env.production.local
+painel/entregador/.env
+painel/entregador/.env.local
+painel/entregador/.env.development.local
+painel/entregador/.env.test.local
+painel/entregador/.env.production.local
+
 painel/build/
 painel/entregador/build/
 
