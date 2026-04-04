@@ -17,16 +17,16 @@ function Home({ user, setTela }) {
 
         <div className="home-grid">
           <button className="secondary-button" onClick={() => setTela("atendimento")}>
-            Abrir atendimento
+            Atendimento
           </button>
 
           <button className="secondary-button" onClick={() => setTela("disparo")}>
-            Abrir disparo em massa
+            Disparo em massa
           </button>
 
           {user.role === "admin" ? (
             <button className="secondary-button" onClick={() => setTela("acompanhamento")}>
-              Abrir acompanhamento admin
+              Administrar
             </button>
           ) : null}
         </div>

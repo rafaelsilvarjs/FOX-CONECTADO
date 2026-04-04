@@ -76,7 +76,7 @@ function Login({ setUser, setTela }) {
 
         {error ? <div className="error-text">{error}</div> : null}
         <div className="helper-text">
-          O acesso do painel e validado pela planilha de login com email, senha e status liberado.
+          O acesso ao painel e validado pela planilha de login com email, senha e status liberado.
         </div>
       </div>
     </div>
