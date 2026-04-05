@@ -1110,3 +1110,145 @@ body,
     font-size: 16px;
   }
 }
+
+.theme-toggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 60;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: rgba(9, 20, 32, 0.82);
+  color: #f5fbff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+}
+
+html[data-fox-theme="day"] body {
+  background: #eef6ff;
+}
+
+html[data-fox-theme="day"] .theme-toggle {
+  border-color: rgba(18, 56, 95, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: #12385f;
+}
+
+html[data-fox-theme="day"] .deliverer-page,
+html[data-fox-theme="day"] .chat-page {
+  background: #eef6ff;
+}
+
+html[data-fox-theme="day"] .deliverer-page::before,
+html[data-fox-theme="day"] .chat-page::before {
+  background: radial-gradient(circle at top, rgba(38, 166, 255, 0.18), transparent 42%);
+}
+
+html[data-fox-theme="day"] .deliverer-card,
+html[data-fox-theme="day"] .chat-shell {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 247, 255, 0.92));
+  border-color: rgba(108, 156, 202, 0.24);
+}
+
+html[data-fox-theme="day"] .deliverer-card.spotlight::before,
+html[data-fox-theme="day"] .chat-shell::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent 35%);
+}
+
+html[data-fox-theme="day"] .deliverer-brand strong,
+html[data-fox-theme="day"] .chat-header-profile strong,
+html[data-fox-theme="day"] .chat-attendant {
+  color: #12385f;
+}
+
+html[data-fox-theme="day"] .deliverer-brand span,
+html[data-fox-theme="day"] .chat-status,
+html[data-fox-theme="day"] .chat-time,
+html[data-fox-theme="day"] .chat-empty,
+html[data-fox-theme="day"] .deliverer-tip,
+html[data-fox-theme="day"] .menu-tile span,
+html[data-fox-theme="day"] .audio-meta-time {
+  color: #5a7692;
+}
+
+html[data-fox-theme="day"] .deliverer-field,
+html[data-fox-theme="day"] .deliverer-field input,
+html[data-fox-theme="day"] .deliverer-field select,
+html[data-fox-theme="day"] .chat-composer input {
+  color: #17324d;
+}
+
+html[data-fox-theme="day"] .deliverer-field input,
+html[data-fox-theme="day"] .deliverer-field select,
+html[data-fox-theme="day"] .chat-composer input {
+  background: #ffffff;
+  border-color: #c9dbea;
+}
+
+html[data-fox-theme="day"] .deliverer-field input::placeholder,
+html[data-fox-theme="day"] .deliverer-field select,
+html[data-fox-theme="day"] .chat-composer input::placeholder {
+  color: #6f8ba7;
+}
+
+html[data-fox-theme="day"] .deliverer-secondary,
+html[data-fox-theme="day"] .emoji-button {
+  background: #dcebf9;
+  color: #12385f;
+  border-color: #c9dbea;
+}
+
+html[data-fox-theme="day"] .menu-tile,
+html[data-fox-theme="day"] .chat-thread,
+html[data-fox-theme="day"] .deliverer-history-card,
+html[data-fox-theme="day"] .deliverer-history-message,
+html[data-fox-theme="day"] .audio-chip {
+  background: #ffffff;
+  color: #17324d;
+  border-color: #d6e4f1;
+}
+
+html[data-fox-theme="day"] .chat-bubble {
+  background: #ffffff;
+  color: #17324d;
+  border-color: #d6e4f1;
+}
+
+html[data-fox-theme="day"] .chat-bubble.mine {
+  background: #d9f7ed;
+  color: #114634;
+}
+
+html[data-fox-theme="day"] .chat-bubble.broadcast,
+html[data-fox-theme="day"] .notice-banner {
+  background: linear-gradient(135deg, rgba(218, 243, 255, 0.96), rgba(216, 255, 242, 0.94));
+  color: #12385f;
+  border-color: rgba(31, 185, 216, 0.26);
+}
+
+html[data-fox-theme="day"] .chat-topbar,
+html[data-fox-theme="day"] .chat-tab.active {
+  background: linear-gradient(135deg, #d4f4ed, #dff3fb);
+  color: #12385f;
+}
+
+html[data-fox-theme="day"] .chat-tab {
+  background: #e6f1fa;
+  color: #5a7692;
+}
+
+html[data-fox-theme="day"] .performance-page {
+  background:
+    radial-gradient(circle at top, rgba(255, 214, 10, 0.18), transparent 28%),
+    #f8fbff;
+}
+
+html[data-fox-theme="day"] .performance-page::before {
+  background:
+    radial-gradient(circle at top, rgba(255, 214, 10, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 214, 10, 0.04), transparent 32%);
+}

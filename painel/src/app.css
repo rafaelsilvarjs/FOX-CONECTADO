@@ -2071,3 +2071,136 @@ body,
     flex-direction: column;
   }
 }
+
+.theme-toggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 60;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: rgba(9, 20, 32, 0.82);
+  color: #f5fbff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+}
+
+html[data-fox-theme="day"] body {
+  background: #eef6ff;
+}
+
+html[data-fox-theme="day"] .theme-toggle {
+  border-color: rgba(18, 56, 95, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: #12385f;
+}
+
+html[data-fox-theme="day"] .login-page,
+html[data-fox-theme="day"] .home-page {
+  background: #eef6ff;
+}
+
+html[data-fox-theme="day"] .login-page::before,
+html[data-fox-theme="day"] .home-page::before {
+  background: radial-gradient(circle at top, rgba(38, 166, 255, 0.18), transparent 42%);
+}
+
+html[data-fox-theme="day"] .login-card,
+html[data-fox-theme="day"] .home-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 247, 255, 0.92));
+  border-color: rgba(108, 156, 202, 0.24);
+}
+
+html[data-fox-theme="day"] .login-card::before,
+html[data-fox-theme="day"] .home-card::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent 35%);
+}
+
+html[data-fox-theme="day"] .brand strong,
+html[data-fox-theme="day"] .content-header h2,
+html[data-fox-theme="day"] .queue-summary-pill strong,
+html[data-fox-theme="day"] .monitor-count-value,
+html[data-fox-theme="day"] .mass-panel-head strong,
+html[data-fox-theme="day"] .mass-header .brand strong,
+html[data-fox-theme="day"] .mass-panel > strong {
+  color: #12385f;
+}
+
+html[data-fox-theme="day"] .brand span,
+html[data-fox-theme="day"] .helper-text,
+html[data-fox-theme="day"] .queue-meta,
+html[data-fox-theme="day"] .chat-subtitle,
+html[data-fox-theme="day"] .monitor-card .queue-meta,
+html[data-fox-theme="day"] .mass-subtitle,
+html[data-fox-theme="day"] .mass-region-note {
+  color: #5a7692;
+}
+
+html[data-fox-theme="day"] .field span,
+html[data-fox-theme="day"] .topbar-status-field span,
+html[data-fox-theme="day"] .transfer-select-field span,
+html[data-fox-theme="day"] .mass-hotzone-field span,
+html[data-fox-theme="day"] .mass-message-field span {
+  color: #4f6b87;
+}
+
+html[data-fox-theme="day"] .field input,
+html[data-fox-theme="day"] .field textarea,
+html[data-fox-theme="day"] .field select,
+html[data-fox-theme="day"] .base-search,
+html[data-fox-theme="day"] .composer input,
+html[data-fox-theme="day"] .topbar-status-field select,
+html[data-fox-theme="day"] .transfer-select-field select,
+html[data-fox-theme="day"] .mass-hotzone-field select,
+html[data-fox-theme="day"] .mass-panel textarea,
+html[data-fox-theme="day"] .mass-message-field textarea {
+  background: #ffffff;
+  border-color: #c9dbea;
+  color: #17324d;
+}
+
+html[data-fox-theme="day"] .secondary-button,
+html[data-fox-theme="day"] .secondary-button.topbar-button,
+html[data-fox-theme="day"] .tag-button.active {
+  background: #dcebf9;
+  color: #12385f;
+}
+
+html[data-fox-theme="day"] .ghost-button,
+html[data-fox-theme="day"] .content-actions > .ghost-button {
+  background: rgba(255, 255, 255, 0.94);
+  color: #1286b7;
+  border-color: #b3d7ea;
+}
+
+html[data-fox-theme="day"] .sidebar,
+html[data-fox-theme="day"] .details-panel {
+  background: #dcecf9;
+  color: #12385f;
+}
+
+html[data-fox-theme="day"] .sidebar-list,
+html[data-fox-theme="day"] .content {
+  background: linear-gradient(180deg, #ffffff 0%, #edf6ff 100%);
+  color: #17324d;
+}
+
+html[data-fox-theme="day"] .sidebar-block,
+html[data-fox-theme="day"] .queue-card,
+html[data-fox-theme="day"] .profile-card,
+html[data-fox-theme="day"] .transfer-panel,
+html[data-fox-theme="day"] .history-card,
+html[data-fox-theme="day"] .mini-chat-card,
+html[data-fox-theme="day"] .observer-panel,
+html[data-fox-theme="day"] .mass-shell,
+html[data-fox-theme="day"] .mass-panel,
+html[data-fox-theme="day"] .monitor-shell,
+html[data-fox-theme="day"] .monitor-card {
+  background: #ffffff;
+  border-color: #d6e4f1;
+  color: #17324d;
+}
