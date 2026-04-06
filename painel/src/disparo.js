@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { API_URL } from "./config";
 
-const REGIOES = ["Todos", "Sao Paulo", "Rio de Janeiro", "Campinas"];
+const REGIOES_ORDEM = ["Sao Paulo", "Rio de Janeiro", "Campinas"];
 
 function lerArquivoComoDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -26,8 +26,7 @@ function Disparo({ user, onBack, onGoToAtendimento }) {
 
   useEffect(() => {
     async function carregarBase() {
-      const query = regiao === "Todos" ? "" : `?regiao=${encodeURIComponent(regiao)}`;
-      const resposta = await fetch(`${API_URL}/entregadores${query}`);
+      const resposta = await fetch(`${API_URL}/entregadores`);
       const dados = await resposta.json();
       const lista = dados.entregadores || [];
       setEntregadores(lista);
@@ -35,38 +34,53 @@ function Disparo({ user, onBack, onGoToAtendimento }) {
     }
 
     carregarBase();
-  }, [regiao]);
+  }, []);
+
+  const regioesDisponiveis = useMemo(() => {
+    const detectadas = [...new Set(entregadores.map((item) => String(item.regiao || item.cidade || "").trim()).filter(Boolean))];
+    const ordenadas = [
+      ...REGIOES_ORDEM.filter((item) => detectadas.includes(item)),
+      ...detectadas.filter((item) => !REGIOES_ORDEM.includes(item)).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+    ];
+
+    return ["Todos", ...ordenadas];
+  }, [entregadores]);
+
+  const entregadoresDaRegiao = useMemo(() => {
+    if (regiao === "Todos") {
+      return entregadores;
+    }
+
+    return entregadores.filter((item) => String(item.regiao || item.cidade || "").trim() === regiao);
+  }, [entregadores, regiao]);
 
   const hotZonesDisponiveis = useMemo(() => {
     if (regiao === "Todos") {
       return ["Todas"];
     }
 
-    const zonas = [...new Set(entregadores.map((item) => String(item.hotZone || "").trim()).filter(Boolean))];
+    const zonas = [...new Set(entregadoresDaRegiao.map((item) => String(item.hotZone || "").trim()).filter(Boolean))];
     return ["Todas", ...zonas.sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))];
-  }, [entregadores, regiao]);
+  }, [entregadoresDaRegiao, regiao]);
 
   const entregadoresFiltrados = useMemo(() => {
-    if (hotZoneSelecionada === "Todas") {
-      return entregadores;
-    }
-
-    return entregadores.filter((item) => String(item.hotZone || "").trim() === hotZoneSelecionada);
-  }, [entregadores, hotZoneSelecionada]);
-
-  const resumoRegiao = useMemo(() => {
-    if (regiao === "Todos") {
-      return `${entregadoresFiltrados.length} entregadores ativos na base filtrada.`;
-    }
-
-    return `${entregadoresFiltrados.length} entregadores ativos em ${regiao}.`;
-  }, [entregadoresFiltrados.length, regiao]);
+    const base = hotZoneSelecionada === "Todas"
+      ? entregadoresDaRegiao
+      : entregadoresDaRegiao.filter((item) => String(item.hotZone || "").trim() === hotZoneSelecionada);
+    return base;
+  }, [entregadoresDaRegiao, hotZoneSelecionada]);
 
   useEffect(() => {
     if (!hotZonesDisponiveis.includes(hotZoneSelecionada)) {
       setHotZoneSelecionada("Todas");
     }
   }, [hotZonesDisponiveis, hotZoneSelecionada]);
+
+  useEffect(() => {
+    if (!regioesDisponiveis.includes(regiao)) {
+      setRegiao("Todos");
+    }
+  }, [regiao, regioesDisponiveis]);
 
   useEffect(() => {
     setSelecionados(entregadoresFiltrados.map((item) => item.cpf));
@@ -166,7 +180,7 @@ function Disparo({ user, onBack, onGoToAtendimento }) {
             </div>
 
             <div className="mass-toolbar">
-              {REGIOES.map((item) => (
+              {regioesDisponiveis.map((item) => (
                 <button
                   key={item}
                   className={item === regiao ? "primary-button" : "ghost-button"}
@@ -189,8 +203,6 @@ function Disparo({ user, onBack, onGoToAtendimento }) {
                 </label>
               ) : null}
             </div>
-
-            <div className="mass-region-note">{resumoRegiao}</div>
 
             <div className="mass-list">
               {entregadoresFiltrados.map((item) => (
