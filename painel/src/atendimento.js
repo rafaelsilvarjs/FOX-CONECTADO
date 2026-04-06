@@ -114,17 +114,6 @@ function StatusChecks({ message }) {
   return <span className={`message-checks ${visto ? "seen" : "sent"}`}>{checks}</span>;
 }
 
-function resumoMensagem(message, userEmail) {
-  if (!message) return "Sem mensagens ainda";
-
-  const prefixo = message.from === userEmail ? "Voce: " : "";
-
-  if (message.text) return `${prefixo}${message.text}`;
-  if (message.media?.type === "audio") return `${prefixo}Audio`;
-  if (message.media?.type === "image") return `${prefixo}Foto`;
-  return `${prefixo}Mensagem`;
-}
-
 function iniciaisContato(nome = "", fallback = "") {
   const base = String(nome || fallback || "").trim();
   if (!base) return "FX";
@@ -870,7 +859,7 @@ function Atendimento({ user, onBack, onGoToDisparo, cpfInicial = null }) {
                   className={`whatsapp-filter-chip ${filtroConversas === "ativos" ? "active" : ""}`}
                   onClick={() => setFiltroConversas("ativos")}
                 >
-                  Em atendimento
+                  Atendendo
                 </button>
                 <button
                   className={`whatsapp-filter-chip ${filtroConversas === "fila" ? "active" : ""}`}
@@ -907,7 +896,7 @@ function Atendimento({ user, onBack, onGoToDisparo, cpfInicial = null }) {
                       <div className="whatsapp-chat-bottom">
                         <span className="whatsapp-chat-preview">
                           {item.tipo === "ativo"
-                            ? resumoMensagem(item.ultimaMensagem, user.email)
+                            ? "Conversa em andamento"
                             : item.tipo === "fila"
                               ? `Na fila • ${item.regiao}`
                               : `Contato • ${item.regiao}`}

@@ -6,34 +6,15 @@ import Disparo from "./disparo";
 import Acompanhamento from "./acompanhamento";
 import "./app.css";
 
-const THEME_STORAGE_KEY = "foxlog-theme-mode";
-
-function obterTemaInicial() {
-  if (typeof window !== "undefined") {
-    const salvo = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (salvo === "day" || salvo === "night") {
-      return salvo;
-    }
-  }
-
-  const horaAtual = new Date().getHours();
-  return horaAtual >= 6 && horaAtual < 18 ? "day" : "night";
-}
-
 function App() {
   const [user, setUser] = useState(null);
   const [tela, setTela] = useState("login");
   const [cpfInicialAtendimento, setCpfInicialAtendimento] = useState(null);
-  const [theme, setTheme] = useState(obterTemaInicial);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-fox-theme", theme);
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
-
-  const alternarTema = () => {
-    setTheme((atual) => (atual === "night" ? "day" : "night"));
-  };
+    document.documentElement.setAttribute("data-fox-theme", "night");
+    window.localStorage.removeItem("foxlog-theme-mode");
+  }, []);
 
   let conteudo = null;
 
@@ -73,14 +54,7 @@ function App() {
     conteudo = <Home user={user} setTela={setTela} />;
   }
 
-  return (
-    <>
-      {conteudo}
-      <button className="theme-toggle" type="button" onClick={alternarTema}>
-        {theme === "night" ? "Modo diurno" : "Modo noturno"}
-      </button>
-    </>
-  );
+  return conteudo;
 }
 
 export default App;

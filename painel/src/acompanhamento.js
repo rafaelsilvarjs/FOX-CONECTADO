@@ -314,7 +314,6 @@ function Acompanhamento({ user, onBack, onGoToAtendimento }) {
                           ? mensagem.from
                           : conversaAberta.entregador.nome || conversaAberta.cpf}
                       </strong>
-                      {mensagem.text ? <span>{mensagem.text}</span> : null}
                       <MediaPreview media={mensagem.media} />
                       <small>{formatarHora(mensagem.createdAt)}</small>
                     </div>
@@ -340,7 +339,6 @@ function Acompanhamento({ user, onBack, onGoToAtendimento }) {
                                   ? mensagem.from
                                   : conversaAberta.entregador.nome || conversaAberta.cpf}
                               </strong>
-                              {mensagem.text ? <span>{mensagem.text}</span> : null}
                               <MediaPreview media={mensagem.media} />
                               <small>{formatarDataHora(mensagem.createdAt)}</small>
                             </div>
