@@ -257,17 +257,20 @@ function Acompanhamento({ user, onBack, onGoToAtendimento }) {
                     <div className="empty-state">Sem conversa ativa.</div>
                   ) : (
                     atendente.conversas.map((conversa) => (
-                      <button
-                        type="button"
+                      <div
                         className={`mini-chat-card mini-chat-card-compact ${conversaAberta?.cpf === conversa.cpf ? "selected" : ""}`}
                         key={conversa.cpf}
-                        onClick={() => acompanhar(conversa.cpf)}
                       >
+                        <button type="button" className="mini-chat-open" onClick={() => acompanhar(conversa.cpf)}>
                         <strong className="mini-chat-title">{conversa.entregador.nome || conversa.cpf}</strong>
                         <span className="queue-meta">
                           {conversa.entregador.regiao || "-"}{conversa.aguardandoResposta ? " • aguardando" : ""}
                         </span>
-                      </button>
+                        </button>
+                        <button type="button" className="ghost-button small mini-chat-assume" onClick={() => assumir(conversa.cpf)}>
+                          Assumir
+                        </button>
+                      </div>
                     ))
                   )}
                 </div>
