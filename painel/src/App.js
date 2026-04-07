@@ -68,6 +68,7 @@ function App() {
         cpfInicial={cpfInicialAtendimento}
         onBack={() => setTela("home")}
         onGoToDisparo={() => setTela("disparo")}
+        onGoToAcompanhamento={() => setTela("acompanhamento")}
       />
     );
   } else if (tela === "disparo") {
@@ -76,6 +77,7 @@ function App() {
         user={user}
         onBack={() => setTela("home")}
         onGoToAtendimento={() => setTela("atendimento")}
+        onGoToAcompanhamento={() => setTela("acompanhamento")}
       />
     );
   } else if (tela === "acompanhamento" && user.role === "admin") {

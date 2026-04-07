@@ -238,7 +238,7 @@ function criarPerfilContato(entregador = {}, cpf = "") {
   };
 }
 
-function Atendimento({ user, onBack, onGoToDisparo, cpfInicial = null }) {
+function Atendimento({ user, onBack, onGoToDisparo, onGoToAcompanhamento, cpfInicial = null }) {
   const logoUrl = `${process.env.PUBLIC_URL}/logo192.png`;
   const socket = useMemo(() => io(API_URL, { autoConnect: false }), []);
   const contatoAtualRef = useRef(null);
@@ -951,6 +951,11 @@ function Atendimento({ user, onBack, onGoToDisparo, cpfInicial = null }) {
               <button className="secondary-button topbar-button mass-action-button" onClick={onGoToDisparo}>
                 Disparo em massa
               </button>
+              {user.role === "admin" ? (
+                <button className="secondary-button topbar-button" onClick={onGoToAcompanhamento}>
+                  Administrador
+                </button>
+              ) : null}
               <button className="secondary-button topbar-button finalize-action-button" onClick={finalizarConversa} disabled={!contatoEhAtivo}>
                 Finalizar
               </button>

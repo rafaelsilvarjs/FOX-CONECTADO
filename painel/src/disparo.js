@@ -12,7 +12,7 @@ function lerArquivoComoDataUrl(file) {
   });
 }
 
-function Disparo({ user, onBack, onGoToAtendimento }) {
+function Disparo({ user, onBack, onGoToAtendimento, onGoToAcompanhamento }) {
   const logoUrl = `${process.env.PUBLIC_URL}/logo192.png`;
   const fileInputRef = useRef(null);
   const [regiao, setRegiao] = useState("Todos");
@@ -163,6 +163,11 @@ function Disparo({ user, onBack, onGoToAtendimento }) {
             <button className="secondary-button" onClick={onGoToAtendimento}>
               Ir para atendimento
             </button>
+            {user.role === "admin" ? (
+              <button className="secondary-button" onClick={onGoToAcompanhamento}>
+                Ir para administrador
+              </button>
+            ) : null}
             <button className="ghost-button" onClick={onBack}>
               Voltar
             </button>
