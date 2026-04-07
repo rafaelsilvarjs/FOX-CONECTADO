@@ -83,6 +83,7 @@ function App() {
       <Acompanhamento
         user={user}
         onBack={() => setTela("home")}
+        onGoToDisparo={() => setTela("disparo")}
         onGoToAtendimento={(cpf) => {
           setCpfInicialAtendimento(cpf);
           setTela("atendimento");

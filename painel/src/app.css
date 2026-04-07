@@ -1766,12 +1766,14 @@ body,
   justify-content: space-between;
   gap: 10px;
   margin: 8px 0 8px;
+  flex-wrap: wrap;
 }
 
 .role-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   border-radius: 999px;
   padding: 6px 10px;
   background: #edf6ff;
@@ -1779,6 +1781,7 @@ body,
   border: 1px solid #d2e4f3;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .monitor-count-row {
@@ -1797,10 +1800,12 @@ body,
 }
 
 .status-badge {
+  flex: 0 0 auto;
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-badge.online {

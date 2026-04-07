@@ -103,7 +103,24 @@ function MediaPreview({ media }) {
   return null;
 }
 
-function Acompanhamento({ user, onBack, onGoToAtendimento }) {
+function nomeConversaSeguro(conversa) {
+  const nome = String(conversa?.entregador?.nome || "").trim();
+  if (!nome) return conversa?.cpf || "-";
+
+  const pareceTextoInvalido =
+    nome.length > 60 ||
+    /Minnesota|classifica[cç][aã]o energ[eé]tica|Acompanhamentos \(ou locais\)/i.test(nome);
+
+  return pareceTextoInvalido ? conversa?.cpf || "-" : nome;
+}
+
+function rotuloStatusAtendente(atendente) {
+  if (!atendente?.online) return "Offline";
+  if (String(atendente.status || "").toLowerCase() === "ausente") return "Ausente";
+  return atendente?.conversas?.length > 0 ? "Atendendo" : "Online";
+}
+
+function Acompanhamento({ user, onBack, onGoToAtendimento, onGoToDisparo }) {
   const logoUrl = `${process.env.PUBLIC_URL}/logo192.png`;
   const socket = useMemo(() => io(API_URL, { autoConnect: false }), []);
   const [atendentes, setAtendentes] = useState([]);
@@ -195,7 +212,7 @@ function Acompanhamento({ user, onBack, onGoToAtendimento }) {
   };
 
   const rotuloRole = (role) =>
-    role === "admin" ? "Admin" : role === "operacao" ? "Operacao" : "Atendente";
+    role === "admin" ? "Administrador" : role === "operacao" ? "Operacao" : "Atendente";
 
   return (
     <div className="monitor-page">
@@ -209,9 +226,17 @@ function Acompanhamento({ user, onBack, onGoToAtendimento }) {
             </div>
           </div>
 
-          <button className="ghost-button" onClick={onBack}>
-            Voltar
-          </button>
+          <div className="mass-header-actions">
+            <button className="secondary-button" onClick={() => onGoToAtendimento?.()}>
+              Ir para atendimento
+            </button>
+            <button className="secondary-button" onClick={onGoToDisparo}>
+              Ir para disparo
+            </button>
+            <button className="ghost-button" onClick={onBack}>
+              Voltar
+            </button>
+          </div>
         </div>
 
         {erro ? <div className="error-text">{erro}</div> : null}
@@ -230,12 +255,12 @@ function Acompanhamento({ user, onBack, onGoToAtendimento }) {
                 <div className="monitor-summary-row">
                   <span className="role-chip">{rotuloRole(atendente.role)}</span>
                   <span className={`status-badge ${atendente.online ? "online" : "offline"}`}>
-                    {atendente.status}
+                    {rotuloStatusAtendente(atendente)}
                   </span>
                 </div>
 
                 <div className="monitor-count-row">
-                  <span className="queue-meta">Em atendimento</span>
+                  <span className="queue-meta">Atendendo</span>
                   <strong className="monitor-count-value">{atendente.conversas.length}</strong>
                 </div>
 
@@ -262,7 +287,7 @@ function Acompanhamento({ user, onBack, onGoToAtendimento }) {
                         key={conversa.cpf}
                       >
                         <button type="button" className="mini-chat-open" onClick={() => acompanhar(conversa.cpf)}>
-                        <strong className="mini-chat-title">{conversa.entregador.nome || conversa.cpf}</strong>
+                          <strong className="mini-chat-title">{nomeConversaSeguro(conversa)}</strong>
                         <span className="queue-meta">
                           {conversa.entregador.regiao || "-"}{conversa.aguardandoResposta ? " • aguardando" : ""}
                         </span>
